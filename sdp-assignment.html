@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+     <meta charset="UTF-8" />
+     <title>SDP Assignment 02 - Drink Explorer</title>
+     <meta name="viewport" content="width=device-width, initial-scale=1" />
+     <style>
+          * {
+               box-sizing: border-box;
+               margin: 0;
+               padding: 0;
+          }
+
+          body {
+               font-family: Arial, sans-serif;
+               background: #f4f4f4;
+          }
+
+          header {
+               background: #4a4e69;
+               color: white;
+               padding: 20px;
+               text-align: center;
+               font-size: 24px;
+          }
+
+          .controls {
+               text-align: center;
+               margin: 20px;
+          }
+
+          .controls input {
+               padding: 10px;
+               width: 250px;
+               font-size: 16px;
+               border-radius: 5px;
+               border: 1px solid #aaa;
+          }
+
+          .controls button {
+               padding: 10px 20px;
+               background: #4a4e69;
+               color: white;
+               border: none;
+               border-radius: 5px;
+               cursor: pointer;
+               margin-left: 10px;
+          }
+
+          .main {
+               display: flex;
+               flex-wrap: wrap;
+               padding: 20px;
+               gap: 20px;
+          }
+
+          .left,
+          .right {
+               flex: 1;
+               min-width: 320px;
+               background: white;
+               padding: 15px;
+               border-radius: 8px;
+               box-shadow: 0 0 6px #ccc;
+          }
+
+          .drink-card {
+               border: 1px solid #ddd;
+               border-radius: 8px;
+               padding: 12px;
+               margin-bottom: 12px;
+               background: #fff;
+          }
+
+          .drink-card h3 {
+               color: #222;
+               margin-bottom: 6px;
+          }
+
+          .drink-card p {
+               font-size: 14px;
+               margin-bottom: 6px;
+          }
+
+          .drink-card button {
+               margin-right: 8px;
+               padding: 6px 12px;
+               border: none;
+               border-radius: 5px;
+               cursor: pointer;
+          }
+
+          .add-btn {
+               background: #4a4e69;
+               color: white;
+          }
+
+          .details-btn {
+               background: #9a031e;
+               color: white;
+          }
+
+          ul {
+               list-style: none;
+               padding: 0;
+          }
+
+          li {
+               background: #eee;
+               padding: 8px;
+               margin: 5px 0;
+               border-radius: 4px;
+          }
+
+          .modal {
+               display: none;
+               position: fixed;
+               top: 0;
+               left: 0;
+               width: 100%;
+               height: 100%;
+               background: rgba(0, 0, 0, 0.6);
+               justify-content: center;
+               align-items: center;
+          }
+
+          .modal-content {
+               background: white;
+               padding: 30px;
+               width: 90%;
+               max-width: 500px;
+               border-radius: 10px;
+               position: relative;
+          }
+
+          .close {
+               position: absolute;
+               right: 15px;
+               top: 10px;
+               font-size: 22px;
+               color: #9a031e;
+               cursor: pointer;
+          }
+
+          @media(max-width: 768px) {
+               .main {
+                    flex-direction: column;
+               }
+          }
+     </style>
+</head>
+
+<body>
+     <header>SDP Assignment 02: Drink Explorer 🍹</header>
+
+     <div class="controls">
+          <input type="text" id="search" placeholder="Search drinks..." />
+          <button onclick="searchDrinks()">Search</button>
+     </div>
+
+     <div class="main">
+          <div class="left" id="drink-container"></div>
+          <div class="right" id="group-container">
+               <h3>Selected Drinks (0)</h3>
+               <ul id="group-list"></ul>
+          </div>
+     </div>
+
+     <div id="modal" class="modal">
+          <div class="modal-content" id="modal-content">
+               <span class="close" onclick="closeModal()">&times;</span>
+          </div>
+     </div>
+
+     <script>
+          const drinkContainer = document.getElementById("drink-container");
+          const groupList = document.getElementById("group-list");
+          const modal = document.getElementById("modal");
+          const modalContent = document.getElementById("modal-content");
+          let group = [];
+
+          async function loadDefaultDrinks() {
+               const res = await fetch("https://www.thecocktaildb.com/api/json/v1/1/search.php?s=a");
+               const data = await res.json();
+               displayDrinks(data.drinks.slice(0, 8));
+          }
+
+          async function searchDrinks() {
+               const query = document.getElementById("search").value.trim();
+               drinkContainer.innerHTML = "";
+
+               if (!query) return alert("Please enter a search term!");
+
+               const res = await fetch(`https://www.thecocktaildb.com/api/json/v1/1/search.php?s=${query}`);
+               const data = await res.json();
+
+               if (!data.drinks) {
+                    drinkContainer.innerHTML = "<p>No drinks found.</p>";
+               } else {
+                    displayDrinks(data.drinks);
+               }
+          }
+
+          function displayDrinks(drinks) {
+               drinkContainer.innerHTML = "";
+               drinks.forEach(drink => {
+                    const card = document.createElement("div");
+                    card.className = "drink-card";
+                    card.innerHTML = `
+          <h3>${drink.strDrink}</h3>
+          <p><strong>Category:</strong> ${drink.strCategory}</p>
+          <p>${drink.strInstructions.slice(0, 15)}...</p>
+          <button class="add-btn" onclick="addToGroup('${drink.strDrink}')">Add to Group</button>
+          <button class="details-btn" onclick="showDetails('${drink.idDrink}')">Details</button>
+        `;
+                    drinkContainer.appendChild(card);
+               });
+          }
+
+          function addToGroup(name) {
+               if (group.length >= 7) {
+                    alert("You can't add more than 7 drinks to the group!");
+                    return;
+               }
+               if (!group.includes(name)) {
+                    group.push(name);
+                    updateGroupUI();
+               }
+          }
+
+          function updateGroupUI() {
+               groupList.innerHTML = "";
+               group.forEach(item => {
+                    const li = document.createElement("li");
+                    li.innerText = item;
+                    groupList.appendChild(li);
+               });
+               document.querySelector("#group-container h3").innerText = `Selected Drinks (${group.length})`;
+          }
+
+          async function showDetails(id) {
+               const res = await fetch(`https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`);
+               const drink = (await res.json()).drinks[0];
+
+               modalContent.innerHTML = `
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h2>${drink.strDrink}</h2>
+        <p><strong>Category:</strong> ${drink.strCategory}</p>
+        <p><strong>Glass:</strong> ${drink.strGlass}</p>
+        <p><strong>Instructions:</strong> ${drink.strInstructions}</p>
+        <p><strong>Alcoholic:</strong> ${drink.strAlcoholic}</p>
+        <p><strong>Ingredients:</strong> ${[
+                         drink.strIngredient1,
+                         drink.strIngredient2,
+                         drink.strIngredient3,
+                         drink.strIngredient4
+                    ].filter(Boolean).join(', ')}</p>
+      `;
+               modal.style.display = "flex";
+          }
+
+          function closeModal() {
+               modal.style.display = "none";
+          }
+
+          window.onload = loadDefaultDrinks;
+     </script>
+</body>
+
+</html>
